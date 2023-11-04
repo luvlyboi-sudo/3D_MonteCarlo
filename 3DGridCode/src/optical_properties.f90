@@ -25,7 +25,7 @@ module optical_properties_class
     end type optical_properties
 
     private
-    public :: optical_properties, init_opt_sphere, init_opt2
+    public :: optical_properties, init_opt_sphere, init_opt2,init_neutron_properties
 
     contains
     
@@ -45,7 +45,8 @@ module optical_properties_class
         end subroutine init_opt_sphere
 
         subroutine init_neutron_properties(mus, mua, muf, hgg, opt_prop)
-            !! Set material properties for neutron interactions.
+            !! Set material properties for neutron interactions. Includes another term for fission
+
                 type(optical_properties), intent(out) :: opt_prop
                 real(kind=wp),            intent(in)  :: mus, mua, muf, hgg
                 
@@ -59,7 +60,7 @@ module optical_properties_class
                 opt_prop%kappa  = opt_prop%mus + opt_prop%mua + opt_prop%muf  
                 opt_prop%albedo = opt_prop%mus / opt_prop%kappa
                 
-            end subroutine init_neutron_properties
+        end subroutine init_neutron_properties
         
         subroutine init_opt2(opt_prop)
         !!  Set tissue optical properties 420nm

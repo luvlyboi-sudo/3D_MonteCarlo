@@ -1,18 +1,18 @@
 module sourceph_mod
-!! Module contains the routines to inialise a photon, i.e different light sources.
+!! Module contains the routines to inialise a neutron, i.e different light sources.
     implicit none
 
     contains
         subroutine isotropic_point_src(packet, grid)
-        !! set intial photon position at (0.0, 0.0, 0.0) and sample photon direction in an isotropic manner.
+        !! set intial neutron position at (0.0, 0.0, 0.0) and sample neutron direction in an isotropic manner.
 
             use constants,    only : TWOPI, wp
             use gridset_mod,  only :cart_grid
-            use photon_class, only : photon
+            use neutron_class, only : neutron
             use random_mod,   only : ran2
 
-            !> photon object
-            type(photon),    intent(out) :: packet
+            !> neutron object
+            type(neutron),    intent(out) :: packet
             !> grid object
             type(cart_grid), intent(in)  :: grid
 

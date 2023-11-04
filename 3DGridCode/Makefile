@@ -22,6 +22,7 @@ SRC =       $(SRC_DIR)/constants.f90 \
             $(SRC_DIR)/vector_class.f90 \
             $(SRC_DIR)/optical_properties.f90 \
             $(SRC_DIR)/photon_class.f90 \
+            $(SRC_DIR)/neutron_class.f90 \
             $(SRC_DIR)/iarray.f90 \
             $(SRC_DIR)/gridset.f90 \
             $(SRC_DIR)/inttau2.f90 \

@@ -1,5 +1,5 @@
 module inttau2
-!! module contains routines related to the optical depth integration of a photon though a 3D grid.
+!! module contains routines related to the optical depth integration of a neutron though a 3D grid.
     
     use constants, only : wp
     
@@ -15,12 +15,12 @@ CONTAINS
 
         use gridset_mod,  only : cart_grid
         use iarray,       only : rhokap
-        use photon_class, only : photon
+        use neutron_class, only : neutron
         use random_mod,   only : ran2
         use vector_class, only : vector
         
         !> packet to move through the grid
-        type(photon),    intent(inout) :: packet
+        type(neutron),    intent(inout) :: packet
         !> grid that the packet moves through
         type(cart_grid), intent(in)    :: grid
 
@@ -83,11 +83,11 @@ CONTAINS
     !!function that returns distant to nearest wall and which wall that is (x ,y or z)
 
         use gridset_mod,  only : cart_grid
-        use photon_class, only : photon
+        use neutron_class, only : neutron
         use vector_class, only : vector
 
-        !> photon packet
-        type(photon),    intent(inout) :: packet
+        !> neutron packet
+        type(neutron),    intent(inout) :: packet
         !> grid variable container
         type(cart_grid), intent(in)    :: grid
         !> current position
@@ -138,17 +138,17 @@ CONTAINS
 
 
     subroutine update_pos(packet, grid, pos, celli, cellj, cellk, dcell, wall_flag, dir)
-    !! routine that upates postions of photon and calls fresnel routines if photon leaves current voxel
+    !! routine that upates postions of neutron and calls fresnel routines if neutron leaves current voxel
 
         use gridset_mod,  only : cart_grid
-        use photon_class, only : photon
+        use neutron_class, only : neutron
         use random_mod,   only : ran2
         use utils,        only : str
         use vector_class, only : vector
 
-        !> photon object
-        type(photon),    intent(in)    :: packet      
-        !> current photon position
+        !> neutron object
+        type(neutron),    intent(in)    :: packet      
+        !> current neutron position
         type(vector),    intent(inout) :: pos
         !> grid object
         type(cart_grid), intent(in)    :: grid
@@ -223,7 +223,7 @@ CONTAINS
         use gridset_mod,  only : cart_grid
         use vector_class, only : vector
 
-        !> current photon position vector
+        !> current neutron position vector
         type(vector),    intent(in)    :: pos
         !> grid object
         type(cart_grid), intent(in)    :: grid

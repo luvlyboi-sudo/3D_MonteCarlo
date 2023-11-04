@@ -5,7 +5,7 @@ program mcpolar
     use gridset_mod,              only : gridset, cart_grid
     use inttau2,                  only : tauint1
     use optical_properties_class, only : optical_properties, init_neutron_properties 
-    use photon_class,             only : photon
+    use neutron_class,            only : neutron
     use random_mod,               only : ran2, init_seed
     use sourceph_mod,             only : isotropic_point_src
     use utils,                    only : set_directories, str
@@ -13,16 +13,20 @@ program mcpolar
 
     implicit none
 
-    !> variable that holds all information about the photon to be simulated
-    type(photon)     :: packet
+    !> variable that holds all information about the neutron to be simulated
+    type(neutron) :: packet
     !> variable that holds the 3D grid information
     type(cart_grid)  :: grid
     !> optical properties variable
     type(optical_properties) :: opt_prop
-    !> number of photons to run in the simulation
+    !> number of photons/neutrons to run in the simulation
     integer :: nphotons
     !> counter for number of scatterings for all photons
     real(kind=wp) :: nscatt
+    !> probabilites for absorb, scattering, fission
+    real(kind=wp) :: cumulative_scatter, cumulative_absorb
+    !> Storing the generated random number
+    real(kind=wp) :: rand_val
     !> user defined seed
     integer :: seed
     !> temp variables related to I/O from param file
@@ -32,7 +36,7 @@ program mcpolar
     !> file handle
     integer :: u
     !> temp variables related to I/O from param file
-    real(kind=wp) :: xmax, ymax, zmax, mus, mua, hgg
+    real(kind=wp) :: xmax, ymax, zmax, mus, mua, muf, hgg
     !> timing vars
     real(kind=wp) :: start, finish
 
@@ -56,15 +60,16 @@ program mcpolar
     read(u,*) nzg
     read(u,*) mus
     read(u,*) mua
+    read(u,*) muf
     read(u,*) hgg
     close(u)
     
-    print*, ''      
-    print*,'# of photons to run',nphotons
+    !print*, ''      
+    !print*,'# of photons to run',nphotons
     
     !set optical properties for fission
     call init_neutron_properties(mus, mua, muf, hgg, opt_prop)
-    
+
     ! Set up grid
     call gridset(grid, opt_prop, nxg, nyg, nzg, xmax, ymax, zmax)
 
@@ -86,17 +91,35 @@ program mcpolar
         ! Find scattering location
         call tauint1(packet, grid)
         ! Photon scatters in grid until it exits (tflag=TRUE) 
-        do while(.not. packet%tflag)
+        
+        !do while(.not. packet%tflag)
+        do while(packet%tflag)
 
-            !interact with medium
-            if(ran2() < opt_prop%albedo)then
-                ! photon is scattered
+            ! Need to change the below to see if the neutron abosrbs, scatters or fisses and then call the appropriate subroutines
+            rand_val = ran2()
+
+            ! Calculate cumulative probabilities
+            cumulative_scatter = opt_prop%mus / opt_prop%kappa
+            cumulative_absorb = cumulative_scatter + opt_prop%mua / opt_prop%kappa
+
+            print*,'scattering prob '//str(cumulative_scatter)
+            print*,'absorption prob '//str(cumulative_absorb)
+            print*,'random_number'//str(rand_val)
+
+            if (rand_val < cumulative_scatter) then
+                ! Neutron is scattered, we're not changing its energy as of yet
+                print*,'Scattering'
                 call packet%scatter(opt_prop)
-                nscatt = nscatt + 1._wp    
-            else
-                ! photon is absorbed
+                nscatt = nscatt + 1._wp
+            elseif (rand_val >= cumulative_scatter .and. rand_val < cumulative_absorb) then 
+                ! photon is absorbed 
+                print*,'Absorbed'
                 packet%tflag=.true.
                 exit
+            else
+                print*,'Fission'
+                ! Else the neutrons causes fission 
+                ! call packet%fission 
             end if
 
             ! Find next scattering location
