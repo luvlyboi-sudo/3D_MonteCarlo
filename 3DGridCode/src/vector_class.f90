@@ -1,7 +1,5 @@
 Module vector_class
     !! Module contains the vector class and associated routines.
-
-    !Just seeing it github is connected
     
     use constants, only : wp
 

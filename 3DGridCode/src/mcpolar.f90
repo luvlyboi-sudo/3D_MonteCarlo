@@ -4,7 +4,7 @@ program mcpolar
     use constants,                only : resdir, wp
     use gridset_mod,              only : gridset, cart_grid
     use inttau2,                  only : tauint1
-    use optical_properties_class, only : optical_properties, init_opt_sphere
+    use optical_properties_class, only : optical_properties, init_neutron_properties 
     use photon_class,             only : photon
     use random_mod,               only : ran2, init_seed
     use sourceph_mod,             only : isotropic_point_src
@@ -62,8 +62,9 @@ program mcpolar
     print*, ''      
     print*,'# of photons to run',nphotons
     
-    !set optical properties
-    call init_opt_sphere(mus, mua, hgg, opt_prop)
+    !set optical properties for fission
+    call init_neutron_properties(mus, mua, muf, hgg, opt_prop)
+    
     ! Set up grid
     call gridset(grid, opt_prop, nxg, nyg, nzg, xmax, ymax, zmax)
 

@@ -12,6 +12,8 @@ module optical_properties_class
         real(kind=wp) :: mus
         !> \(\mu_a\) is the absorption coefficent. in cm\(^{-1}\)
         real(kind=wp) :: mua
+        !> Fission coefficient in cm^{-1} //ADDED BY ME
+        real(kind=wp) :: muf    
         !> hgg is the g factor. Describes the bias of the scattering direction. 1 means forward, 0 isotropic and -1 backscattering. unitless   
         real(kind=wp) :: hgg
         !> Is the g factor squared
@@ -37,11 +39,27 @@ module optical_properties_class
                 opt_prop%g2  = opt_prop%hgg**2._wp
                 opt_prop%mus = mus
                 opt_prop%mua = mua
-
-                opt_prop%kappa  = opt_prop%mus + opt_prop%mua
+                opt_prop%kappa  = opt_prop%mus + opt_prop%mua   
                 opt_prop%albedo = opt_prop%mus / opt_prop%kappa
     
         end subroutine init_opt_sphere
+
+        subroutine init_neutron_properties(mus, mua, muf, hgg, opt_prop)
+            !! Set material properties for neutron interactions.
+                type(optical_properties), intent(out) :: opt_prop
+                real(kind=wp),            intent(in)  :: mus, mua, muf, hgg
+                
+                opt_prop%hgg = hgg
+                opt_prop%g2  = hgg**2
+                opt_prop%mus = mus
+                opt_prop%mua = mua
+                opt_prop%muf = muf !Intialising the fission coefficient
+
+                ! Now includes fission
+                opt_prop%kappa  = opt_prop%mus + opt_prop%mua + opt_prop%muf  
+                opt_prop%albedo = opt_prop%mus / opt_prop%kappa
+                
+            end subroutine init_neutron_properties
         
         subroutine init_opt2(opt_prop)
         !!  Set tissue optical properties 420nm
