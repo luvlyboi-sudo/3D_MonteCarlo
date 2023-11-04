@@ -1,0 +1,10 @@
+100000           nphotons
+1.0              xmax
+1.0              ymax
+1.0              zmax
+201              nxg
+201              nyg
+201              nzg
+10.0             mus
+0.0              mua
+0.0              hgg
