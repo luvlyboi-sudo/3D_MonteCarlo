@@ -1,4 +1,4 @@
-program mcpolar
+program mcpolar 
 
     !imports
     use constants,                only : resdir, wp
@@ -7,7 +7,7 @@ program mcpolar
     use optical_properties_class, only : optical_properties, init_neutron_properties 
     use neutron_class,            only : neutron
     use random_mod,               only : ran2, init_seed
-    use sourceph_mod,             only : isotropic_point_src
+    use sourceph_mod,             only : isotropic_point_src, uniform_sphere_src,init_neutron_hemispheres
     use utils,                    only : set_directories, str
     use writer_mod,               only : writer
 
@@ -21,8 +21,6 @@ program mcpolar
     type(optical_properties) :: opt_prop
     !> number of photons/neutrons to run in the simulation
     integer :: nphotons
-    !> counter for number of scatterings for all photons
-    real(kind=wp) :: nscatt
     !> probabilites for absorb, scattering, fission
     real(kind=wp) :: cumulative_scatter, cumulative_absorb
     !> Storing the generated random number
@@ -37,10 +35,17 @@ program mcpolar
     integer :: u
     !> temp variables related to I/O from param file
     real(kind=wp) :: xmax, ymax, zmax, mus, mua, muf, hgg
-    !> timing vars
-    real(kind=wp) :: start, finish
 
-    call cpu_time(start)
+
+    type(neutron), allocatable :: neutron_bank(:)  !> The bank of neutrons to simulate 
+    type(neutron), allocatable :: local_neutron_bank(:)  !> The bank of neutrons to simulate for the next gen
+    !type(real(kind=wp)), allocatable :: keff(:) !> Array to store the critical coefficients of each generation  
+    integer :: current_gen_num !> What generation is it 
+    integer, parameter :: max_bank_size = 10000 !> Maximum number of neutrons in the bank before we terminate the program
+    integer :: num_fission !> Number of neutrons generated in current generation
+    integer :: num_fission_last !> Number of neutrons generated in the last generation 
+
+    ! ########### [code to set up optical properties, grid, and scattering] ##############
 
     !set directory paths
     call set_directories()
@@ -51,7 +56,7 @@ program mcpolar
     
     !**** Read in parameters from the file input.params
     open(newunit=u,file=trim(resdir)//'input.params',status='old')
-    read(u,*) nphotons
+    read(u,*) nphotons ! This is really the number of neutrons, too lazy to change it everywhere 
     read(u,*) xmax
     read(u,*) ymax
     read(u,*) zmax
@@ -64,81 +69,113 @@ program mcpolar
     read(u,*) hgg
     close(u)
     
-    !print*, ''      
-    !print*,'# of photons to run',nphotons
-    
-    !set optical properties for fission
-    call init_neutron_properties(mus, mua, muf, hgg, opt_prop)
+    call init_neutron_properties(mus, mua, muf, hgg, opt_prop) ! Set optical properties for fission
+    call gridset(grid, opt_prop, nxg, nyg, nzg, xmax, ymax, zmax) ! Set up grid
 
-    ! Set up grid
-    call gridset(grid, opt_prop, nxg, nyg, nzg, xmax, ymax, zmax)
+    ! ################## Intialising Variables ##############
+    current_gen_num = 1
+    num_fission = 0 ! Update this later
+    num_fission_last = nphotons ! For the first generation
+    allocate(neutron_bank(max_bank_size)) ! Start by allocating nphotons spaces in the neutron bank, need to reallocate later
+    allocate(local_neutron_bank(max_bank_size + 1000)) ! Ensuring we don't get a memory error so local bank must be greater than neutron_bank
+    !allocate(keff(10)) 
 
-    ! inialise the number of scatterings counter
-    nscatt = 0_wp
+    do j = 1, nphotons/2 !ensure nphotons is even :)
 
-    print*,'Photons now running'
-    !loop over photons 
-    do j = 1, nphotons
-
-        !display progress
-        if(mod(j,10000) == 0)then
-            print *, str(j)//' scattered photons completed'
-        end if
-
-        ! Release photon from point source
-        call isotropic_point_src(packet, grid)
+        !call isotropic_point_src(neutron_bank(j),grid) ! Populate the bank for first generation
+        !call uniform_sphere_src(packet, grid, 1._wp)
+        call init_neutron_hemispheres(neutron_bank(j),grid,10._wp,0._wp,1)
+        print*, neutron_bank(j)%pos
         
-        ! Find scattering location
-        call tauint1(packet, grid)
-        ! Photon scatters in grid until it exits (tflag=TRUE) 
+    end do
+
+    do j = 1, nphotons/2 !ensure nphotons is even :)
+
+        call init_neutron_hemispheres(neutron_bank(j),grid,10._wp,0._wp,-1)
+        print*, neutron_bank(j)%pos
         
-        !do while(.not. packet%tflag)
-        do while(packet%tflag)
+    end do
 
-            ! Need to change the below to see if the neutron abosrbs, scatters or fisses and then call the appropriate subroutines
-            rand_val = ran2()
+    do while (.true.)
 
-            ! Calculate cumulative probabilities
-            cumulative_scatter = opt_prop%mus / opt_prop%kappa
-            cumulative_absorb = cumulative_scatter + opt_prop%mua / opt_prop%kappa
+        ! ################## The Simulation #######################
 
-            print*,'scattering prob '//str(cumulative_scatter)
-            print*,'absorption prob '//str(cumulative_absorb)
-            print*,'random_number'//str(rand_val)
+        do j = 1, size(neutron_bank)
+            
+            packet = neutron_bank(j)
+            
+            call tauint1(packet, grid) ! Simulate the movement of neutron
+            
+            do while (.not. packet%tflag) ! While packet is alive
+                
+                print*, packet%pos
+                ! Random number for determining if fission, scattering or absorption 
+                rand_val = ran2()
 
-            if (rand_val < cumulative_scatter) then
-                ! Neutron is scattered, we're not changing its energy as of yet
-                print*,'Scattering'
-                call packet%scatter(opt_prop)
-                nscatt = nscatt + 1._wp
-            elseif (rand_val >= cumulative_scatter .and. rand_val < cumulative_absorb) then 
-                ! photon is absorbed 
-                print*,'Absorbed'
-                packet%tflag=.true.
-                exit
-            else
-                print*,'Fission'
-                ! Else the neutrons causes fission 
-                ! call packet%fission 
-            end if
+                ! Calculate cumulative probabilities
+                cumulative_scatter = opt_prop%mus / opt_prop%kappa
+                cumulative_absorb = cumulative_scatter + opt_prop%mua / opt_prop%kappa
 
-            ! Find next scattering location
-            call tauint1(packet, grid)
+                if (rand_val < cumulative_scatter) then
+                    ! Neutron is scattered
+                    !print*,'Scattering'
+                    call packet%scatter(opt_prop) 
+
+                elseif (rand_val >= cumulative_scatter .and. rand_val < cumulative_absorb) then 
+                    ! Neutron is absorbed 
+                    !print*,'Absorbed'
+                    exit
+
+                else
+                    !print*,'Fission'
+                    ! Else the neutrons causes fission 
+                    call packet%fission(opt_prop,local_neutron_bank,num_fission)
+                    exit
+                    
+                end if
+
+            end do
 
         end do
-    end do      ! end loop over nph photons
+        
+        print *, real(num_fission)/real(num_fission_last)
 
-    print*,'Average # of scatters per photon: '//str(nscatt/(nphotons))
-    !write out files
-    call writer(grid, nphotons)
-    print*,'write done'
+        ! Check if the number of fission neutrons exceeds the maximum bank size
+        if (num_fission >= max_bank_size) then
+            print *, "Stopping condition met: Number of fission neutrons exceeds maximum bank size."
+            exit  ! Exit the simulation loop
+        endif
 
-    call cpu_time(finish)
+        if (num_fission > 0) then
+            ! Reallocate neutron_bank to the size of the new fission neutrons
+            neutron_bank(1:num_fission) = local_neutron_bank(1:num_fission)
+    
+        else
+            ! No fission occurred, end the simulation. This stopping condition is num_fission == 0
+            print *, "Stopping condition met: Number of fission neutrons is 0"
+            exit
+        endif
 
-    if(finish-start >= 60._wp)then
-        print*,floor((finish-start)/60._wp)+mod(finish-start,60._wp)/100._wp
-    else
-        print*, 'time taken ~'//str(floor(finish-start/60._wp))//'s'
-    end if
+
+        !Update for next generation
+        !keff(current_gen_num) = real(num_fission)/real(num_fission_last)
+        num_fission_last = num_fission
+        num_fission = 0
+        current_gen_num = current_gen_num + 1 ! Update the generation number
+
+        if (current_gen_num > 200) then 
+            exit
+        endif
+
+    end do 
 
 end program mcpolar
+    
+
+    
+
+    
+
+
+    
+

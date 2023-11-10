@@ -45,6 +45,8 @@ CONTAINS
 
         !sample optical distance
         tau = -log(ran2())
+    
+
         do
             dir = (/.FALSE., .FALSE., .FALSE./)
             !get distance to nearest wall in direction dir
@@ -70,7 +72,7 @@ CONTAINS
                 exit
             end if
         end do
-        
+  
         ! move back to grid with origin at the centre
         packet%pos = pos - grid%dim
         packet%xcell = celli

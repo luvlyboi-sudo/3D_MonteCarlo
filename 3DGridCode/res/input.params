@@ -1,11 +1,11 @@
-5                nphotons
+10                nphotons
 1.0              xmax
 1.0              ymax
 1.0              zmax
 201              nxg
 201              nyg
 201              nzg
-0.204            mus 
-0.005            mua
-0.063            muf
+0.206           mus 
+0.0048           mua 
+0.0624           muf
 0.0              hgg

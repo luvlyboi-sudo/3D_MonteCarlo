@@ -58,7 +58,7 @@ module optical_properties_class
 
                 ! Now includes fission
                 opt_prop%kappa  = opt_prop%mus + opt_prop%mua + opt_prop%muf  
-                opt_prop%albedo = opt_prop%mus / opt_prop%kappa
+                !opt_prop%albedo = opt_prop%mus / opt_prop%kappa
                 
         end subroutine init_neutron_properties
         

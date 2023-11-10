@@ -26,7 +26,7 @@ module gridset_mod
         subroutine gridset(grid, opt_prop, nxg, nyg, nzg, xmax, ymax, zmax)
         !! Set up grids and create geometry
 
-            use iarray,   only : rhokap, rhokap
+            use iarray,   only : rhokap
             use optical_properties_class, only : optical_properties
 
             !> grid variable that is assigned in this routine
@@ -81,7 +81,9 @@ module gridset_mod
                     do k = 1, grid%nzg
                         z = grid%zface(k) - grid%dim%z + grid%dim%z/grid%nzg
                         ! create a sphere of radius 1.
-                        if(sqrt(x**2+y**2+z**2) <= 1._wp)then
+                        if(sqrt(x**2+y**2+z**2) <= 7.3)then
+                            rhokap(i,j,k) = opt_prop%kappa
+                        elseif(sqrt(x**2+y**2+z**2) <= 10.1 .and. sqrt(x**2+y**2+z**2) <= 9.9)then
                             rhokap(i,j,k) = opt_prop%kappa
                         else
                             rhokap(i,j,k) = 0._wp
